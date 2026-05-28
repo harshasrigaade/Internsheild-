@@ -51,61 +51,135 @@ function runLocalHeuristics(hostname, protocol, path, fullUrl) {
     reputation: []
   };
 
-  let trustScore = 8.5; // Base score
-  const isHttps = protocol === "https:";
-
-  // Security Checks
-  if (isHttps) {
-    flags.green.push("HTTPS connection enabled (Secure communication channel)");
-    flags.security.push({ label: "SSL/TLS Connection", status: "Secure", value: "Valid HTTPS Certificate", isSafe: true });
-  } else {
-    flags.red.push("Unsecure connection (HTTP instead of HTTPS). Potential for data interception");
-    flags.security.push({ label: "SSL/TLS Connection", status: "Vulnerable", value: "Missing HTTPS/SSL Encryption", isSafe: false });
-    trustScore -= 2.5;
-  }
-
-  // TLD Heuristics (suspicious top-level domains)
-  const suspiciousTlds = [".xyz", ".cfd", ".top", ".vip", ".work", ".site", ".online", ".club", ".info", ".cc", ".icu", ".biz", ".tk", ".ml", ".ga", ".cf", ".gq", ".loan", ".win", ".bid", ".tech", ".website"];
-  const matchedTld = suspiciousTlds.find(tld => hostname.endsWith(tld));
-  if (matchedTld) {
-    flags.red.push(`Suspicious or cheap top-level domain (${matchedTld}) often preferred by scammers`);
-    flags.security.push({ label: "Domain Registry", status: "High Risk", value: `Registered on budget TLD (${matchedTld})`, isSafe: false });
-    trustScore -= 1.8;
-  } else {
-    flags.security.push({ label: "Domain Registry", status: "Standard", value: "Registered under credible generic TLD", isSafe: true });
-  }
-
-  // Known trusted platforms bypass
   const trustedHosts = [
     "linkedin.com", "github.com", "google.com", "microsoft.com", 
     "glassdoor.com", "indeed.com", "internshala.com", "wellfound.com", 
     "careerbuilder.com", "ziprecruiter.com", "monster.com", "naukri.com",
-    "wipro.com", "tcs.com", "infosys.com", "accenture.com", "amazon.jobs"
+    "wipro.com", "tcs.com", "infosys.com", "accenture.com", "amazon.jobs",
+    "paypal.com", "netflix.com", "apple.com", "facebook.com", "meta.com"
+  ];
+
+  const verifiableStartups = [
+    "stripe.com", "airbnb.com", "uber.com", "lyft.com", "hubspot.com", 
+    "shopify.com", "canva.com", "notion.so", "zoom.us", "slack.com", 
+    "figma.com", "spacex.com", "tesla.com", "cred.club", "razorpay.com", 
+    "paytm.com", "swiggy.com", "zomato.com", "ola.in", "flipkart.com", 
+    "nykaa.com", "meesho.com", "razorpay.in", "paytm.in"
   ];
 
   const isTrusted = trustedHosts.some(host => hostname === host || hostname.endsWith("." + host));
+  const isStartup = verifiableStartups.some(host => hostname === host || hostname.endsWith("." + host));
+  const isHttps = protocol === "https:";
+
+  let trustScore = 3.5; // Default base score for New/Unverified/Risky sites (0-4 range)
+
+  // 1. Establish Base Scores according to categories
   if (isTrusted) {
-    // If it's a job post on a platform rather than the main company homepage:
+    trustScore = 9.5; // Base score for official careers / well-known platforms (8-10 range)
+    flags.green.push(`Verified official hiring platform or established corporate domain (${hostname})`);
+    flags.company.push({ label: "Company Verification", status: "Verified", value: "Official domain matches established firm", isSafe: true });
+    flags.reputation.push({ label: "Public Reputation", status: "High", value: "Highly rated enterprise with secure operations", isSafe: true });
+  } else if (isStartup) {
+    trustScore = 6.8; // Base score for verifiable startups (5-7 range)
+    flags.green.push(`Verifiable startup domain (${hostname})`);
+    flags.company.push({ label: "Company Verification", status: "Startup", value: "Matches profile of active, registered startup", isSafe: true });
+    flags.reputation.push({ label: "Public Reputation", status: "Standard", value: "Credible startup with visible online footprint", isSafe: true });
+  } else {
+    // Risky / Unverified by default (0-4 range)
+    flags.red.push("Unverified Domain: This site is not recognized as an established corporate brand, hiring platform, or verifiable startup.");
+    flags.company.push({ label: "Company Verification", status: "Unverified", value: "No matching record in credible corporate registries", isSafe: false });
+    flags.reputation.push({ label: "Public Reputation", status: "Unknown", value: "No verified employee feedback or Glassdoor ratings found", isSafe: false });
+  }
+
+  // 2. Adjustments for HTTPS Security
+  if (isHttps) {
+    flags.green.push("HTTPS connection enabled (Secure communication channel)");
+    flags.security.push({ label: "SSL/TLS Connection", status: "Secure", value: "Valid HTTPS Certificate", isSafe: true });
+    // Small boost for unverified sites if they at least have HTTPS
+    if (!isTrusted && !isStartup) trustScore += 0.5;
+  } else {
+    flags.red.push("Unsecure connection (HTTP instead of HTTPS). Potential for data interception");
+    flags.security.push({ label: "SSL/TLS Connection", status: "Vulnerable", value: "Missing HTTPS/SSL Encryption", isSafe: false });
+    trustScore -= 2.0;
+  }
+
+  // 3. TLD Heuristics (suspicious top-level domains)
+  const suspiciousTlds = [".xyz", ".cfd", ".top", ".vip", ".work", ".site", ".online", ".club", ".info", ".cc", ".icu", ".biz", ".tk", ".ml", ".ga", ".cf", ".gq", ".loan", ".win", ".bid", ".tech", ".website"];
+  const matchedTld = suspiciousTlds.find(tld => hostname.endsWith(tld));
+  if (matchedTld) {
+    flags.red.push(`Suspicious top-level domain (${matchedTld}) often preferred by scammers for quick setups`);
+    flags.security.push({ label: "Domain Registry", status: "High Risk", value: `Registered under budget TLD (${matchedTld})`, isSafe: false });
+    trustScore -= 1.5;
+  } else {
+    flags.security.push({ label: "Domain Registry", status: "Standard", value: "Registered under credible generic TLD", isSafe: true });
+  }
+
+  // 4. Job Portal / Third-party checks (reduce score of trusted platforms to 5-7 range if listing is third-party)
+  if (isTrusted) {
     if ((hostname.includes("linkedin.com") && path.includes("/jobs/")) || 
         (hostname.includes("internshala.com") && path.includes("/internship/")) ||
         (hostname.includes("indeed.com") && path.includes("/viewjob")) ||
         (hostname.includes("github.com") && path.length > 1)) {
-      flags.green.push(`Hosted on a reputable public platform (${hostname})`);
-      flags.red.push("Third-Party Content: Although this platform is highly secure, scammers frequently post fake job ads or host anonymous markdown offers here.");
-      flags.company.push({ label: "Company Verification", status: "Caution", value: "Listing hosted on public board; verify recruiter directly", isSafe: false });
-      flags.reputation.push({ label: "Public Reputation", status: "Medium", value: "Reputable board but prone to anonymous fake ads", isSafe: true });
-      trustScore = 7.2;
-      return { isTrusted: false, hostname, fullUrl, trustScore, flags };
+      flags.red.push("Third-Party Content: Listing is hosted on a public job board where posters are anonymous. Verify the recruiter's identity directly.");
+      flags.company.push({ label: "Listing Authenticity", status: "Caution", value: "Public listing; susceptible to fake recruiters", isSafe: false });
+      trustScore = 7.0; // Drop into Needs Caution (5-7 range)
     }
-
-    flags.green.push(`Verified official hiring platform/organization domain (${hostname})`);
-    flags.company.push({ label: "Company Verification", status: "Verified", value: "Official domain matches established firm", isSafe: true });
-    flags.reputation.push({ label: "Public Reputation", status: "High", value: "Highly rated platform with secure operations", isSafe: true });
-    trustScore = Math.min(10.0, trustScore + 1.5);
-    return { isTrusted: true, hostname, fullUrl, trustScore: 9.8, flags };
   }
 
-  // Brand spoofing / Phishing check (contains brand name but not official domain)
+  // 5. Free website builders / hosting subdomains
+  const freeHosters = ["wixsite.com", "blogspot.com", "wordpress.com", "vercel.app", "github.io", "webflow.io", "firebaseapp.com", "netlify.app"];
+  const isFreeHost = freeHosters.some(host => hostname.endsWith("." + host) || hostname === host);
+  if (isFreeHost) {
+    flags.red.push("Uses free hosting subdomain or website builder. Genuine businesses invest in custom, branded domains for recruitment.");
+    flags.company.push({ label: "Host Infrastructure", status: "Suspicious", value: "Hosted on free/unbranded subdomain", isSafe: false });
+    trustScore -= 1.5;
+  }
+
+  // 6. Free URL shorteners
+  const shorteners = ["bit.ly", "tinyurl.com", "cutt.ly", "rb.gy", "rebrand.ly", "t.co", "lnkd.in"];
+  if (shorteners.some(s => hostname === s || hostname.endsWith("." + s))) {
+    flags.red.push("Link is wrapped in a URL shortener. This hides the actual destination and is common in scams");
+    flags.security.push({ label: "Destination Transparency", status: "Hidden", value: "Masked URL shortener redirect", isSafe: false });
+    trustScore -= 1.5;
+  }
+
+  // 7. Free Form Builder domains
+  const freeForms = ["forms.gle", "docs.google.com/forms", "jotform.com", "typeform.com", "formfacade.com", "cognitoforms.com"];
+  const isFreeForm = freeForms.some(f => fullUrl.includes(f));
+  if (isFreeForm) {
+    flags.red.push("Direct application via Google Forms or a free form builder. Reputable companies rarely recruit solely on free forms");
+    flags.company.push({ label: "Recruitment Portal", status: "Suspicious", value: "Uses free, unbranded application forms", isSafe: false });
+    trustScore -= 2.0;
+  }
+
+  // 8. Contact details & Email domains check in fullUrl
+  const scamKeywords = [
+    "earn-money", "data-entry", "part-time-job", "captcha-work", "work-from-home",
+    "deposit-fee", "registration-fee", "telegram-hiring", "whatsapp-job",
+    "package-shipping", "resell-jobs", "crypto-tasks", "get-paid-daily", "no-skills-needed",
+    "easy-cash", "typing-jobs"
+  ];
+
+  let scamWordsFound = [];
+  scamKeywords.forEach(kw => {
+    if (fullUrl.includes(kw) || path.includes(kw)) {
+      scamWordsFound.push(kw.replace(/-/g, " "));
+    }
+  });
+
+  if (scamWordsFound.length > 0) {
+    flags.red.push(`Contains suspicious marketing keywords: [${scamWordsFound.join(", ")}]`);
+    trustScore -= 1.0 * scamWordsFound.length;
+  }
+
+  // 9. Subdomain depth check
+  const subdomainCount = hostname.split(".").length - 2;
+  if (subdomainCount > 2 && !hostname.includes("cloudfront") && !hostname.includes("amazonaws")) {
+    flags.red.push("Deep nested subdomain structure. Often used to mimic popular company sites");
+    trustScore -= 0.5;
+  }
+
+  // 10. Brand spoofing / Phishing check (contains brand name but not official domain)
   const officialBrands = ["google", "microsoft", "wipro", "tcs", "infosys", "accenture", "amazon", "paypal", "netflix", "apple", "facebook", "meta"];
   const matchedBrand = officialBrands.find(brand => hostname.includes(brand));
   if (matchedBrand) {
@@ -125,82 +199,17 @@ function runLocalHeuristics(hostname, protocol, path, fullUrl) {
     };
     const officialDomain = officialDomains[matchedBrand];
     if (hostname !== officialDomain && !hostname.endsWith("." + officialDomain)) {
-      flags.red.push(`Potential Brand Impersonation: Domain contains '${matchedBrand}' but does not match the official domain (${officialDomain}). Scammers use typo-squatted domains to trick freshers.`);
+      flags.red.push(`Potential Brand Impersonation: Domain contains '${matchedBrand}' but does not match the official domain (${officialDomain}).`);
       flags.company.push({ label: "Brand Authenticity", status: "Phishing Risk", value: `Mimics official brand '${matchedBrand}'`, isSafe: false });
-      trustScore -= 3.0;
+      trustScore -= 2.5;
     }
-  }
-
-  // Free website builders / hosting subdomains
-  const freeHosters = ["wixsite.com", "blogspot.com", "wordpress.com", "vercel.app", "github.io", "webflow.io", "firebaseapp.com", "netlify.app"];
-  const isFreeHost = freeHosters.some(host => hostname.endsWith("." + host) || hostname === host);
-  if (isFreeHost) {
-    flags.red.push("Uses free hosting subdomain or website builder. Genuine businesses invest in custom, branded domains for recruitment.");
-    flags.company.push({ label: "Host Infrastructure", status: "Suspicious", value: "Hosted on free/unbranded subdomain", isSafe: false });
-    trustScore -= 2.0;
-  }
-
-  // Free URL shorteners
-  const shorteners = ["bit.ly", "tinyurl.com", "cutt.ly", "rb.gy", "rebrand.ly", "t.co", "lnkd.in"];
-  if (shorteners.some(s => hostname === s || hostname.endsWith("." + s))) {
-    flags.red.push("Link is wrapped in a URL shortener. This hides the actual destination and is common in scams");
-    flags.security.push({ label: "Destination Transparency", status: "Hidden", value: "Masked URL shortener redirect", isSafe: false });
-    trustScore -= 2.0;
-  }
-
-  // Free Form Builder domains
-  const freeForms = ["forms.gle", "docs.google.com/forms", "jotform.com", "typeform.com", "formfacade.com", "cognitoforms.com"];
-  const isFreeForm = freeForms.some(f => fullUrl.includes(f));
-  if (isFreeForm) {
-    flags.red.push("Direct application via Google Forms or a free form builder. Reputable companies rarely recruit solely on free forms");
-    flags.company.push({ label: "Recruitment Portal", status: "Suspicious", value: "Uses free, unbranded application forms", isSafe: false });
-    trustScore -= 2.5;
-  }
-
-  // Contact details & Email domains check in fullUrl
-  const scamKeywords = [
-    "earn-money", "data-entry", "part-time-job", "captcha-work", "work-from-home",
-    "deposit-fee", "registration-fee", "telegram-hiring", "whatsapp-job",
-    "package-shipping", "resell-jobs", "crypto-tasks", "get-paid-daily", "no-skills-needed",
-    "easy-cash", "typing-jobs"
-  ];
-
-  let scamWordsFound = [];
-  scamKeywords.forEach(kw => {
-    if (fullUrl.includes(kw) || path.includes(kw)) {
-      scamWordsFound.push(kw.replace(/-/g, " "));
-    }
-  });
-
-  if (scamWordsFound.length > 0) {
-    flags.red.push(`Contains suspicious marketing keywords: [${scamWordsFound.join(", ")}]`);
-    trustScore -= 1.5 * scamWordsFound.length;
-  }
-
-  // Subdomain depth check
-  const subdomainCount = hostname.split(".").length - 2;
-  if (subdomainCount > 2 && !hostname.includes("cloudfront") && !hostname.includes("amazonaws")) {
-    flags.red.push("Deep nested subdomain structure. Often used to mimic popular company sites");
-    trustScore -= 1.0;
-  }
-
-  // Company presence metrics (Simulated based on keywords)
-  const containsGenericJobWord = ["career", "job", "intern", "hr", "recruit", "staffing"].some(w => hostname.includes(w));
-  if (containsGenericJobWord && !isTrusted) {
-    flags.red.push("Uses generic recruitment keywords in the domain name (e.g. '-recruitment', '-hr', '-careers') which is typical for fake proxy sites");
-    trustScore -= 1.2;
-  }
-
-  // Standard checks (if not failed yet, add basic greens)
-  if (flags.red.length === 0) {
-    flags.green.push("No immediate scam signatures or generic domain keywords detected");
   }
 
   // Ensure trustScore remains within 0-10 bounds
   trustScore = Math.max(0.5, Math.min(10.0, parseFloat(trustScore.toFixed(1))));
 
   return {
-    isTrusted: false,
+    isTrusted: isTrusted && trustScore >= 8.0,
     hostname,
     fullUrl,
     trustScore,
