@@ -85,11 +85,59 @@ function runLocalHeuristics(hostname, protocol, path, fullUrl) {
 
   const isTrusted = trustedHosts.some(host => hostname === host || hostname.endsWith("." + host));
   if (isTrusted) {
+    // If it's a job post on a platform rather than the main company homepage:
+    if ((hostname.includes("linkedin.com") && path.includes("/jobs/")) || 
+        (hostname.includes("internshala.com") && path.includes("/internship/")) ||
+        (hostname.includes("indeed.com") && path.includes("/viewjob")) ||
+        (hostname.includes("github.com") && path.length > 1)) {
+      flags.green.push(`Hosted on a reputable public platform (${hostname})`);
+      flags.red.push("Third-Party Content: Although this platform is highly secure, scammers frequently post fake job ads or host anonymous markdown offers here.");
+      flags.company.push({ label: "Company Verification", status: "Caution", value: "Listing hosted on public board; verify recruiter directly", isSafe: false });
+      flags.reputation.push({ label: "Public Reputation", status: "Medium", value: "Reputable board but prone to anonymous fake ads", isSafe: true });
+      trustScore = 7.2;
+      return { isTrusted: false, hostname, fullUrl, trustScore, flags };
+    }
+
     flags.green.push(`Verified official hiring platform/organization domain (${hostname})`);
     flags.company.push({ label: "Company Verification", status: "Verified", value: "Official domain matches established firm", isSafe: true });
     flags.reputation.push({ label: "Public Reputation", status: "High", value: "Highly rated platform with secure operations", isSafe: true });
     trustScore = Math.min(10.0, trustScore + 1.5);
     return { isTrusted: true, hostname, fullUrl, trustScore: 9.8, flags };
+  }
+
+  // Brand spoofing / Phishing check (contains brand name but not official domain)
+  const officialBrands = ["google", "microsoft", "wipro", "tcs", "infosys", "accenture", "amazon", "paypal", "netflix", "apple", "facebook", "meta"];
+  const matchedBrand = officialBrands.find(brand => hostname.includes(brand));
+  if (matchedBrand) {
+    const officialDomains = {
+      google: "google.com",
+      microsoft: "microsoft.com",
+      wipro: "wipro.com",
+      tcs: "tcs.com",
+      infosys: "infosys.com",
+      accenture: "accenture.com",
+      amazon: "amazon.jobs",
+      paypal: "paypal.com",
+      netflix: "netflix.com",
+      apple: "apple.com",
+      facebook: "facebook.com",
+      meta: "meta.com"
+    };
+    const officialDomain = officialDomains[matchedBrand];
+    if (hostname !== officialDomain && !hostname.endsWith("." + officialDomain)) {
+      flags.red.push(`Potential Brand Impersonation: Domain contains '${matchedBrand}' but does not match the official domain (${officialDomain}). Scammers use typo-squatted domains to trick freshers.`);
+      flags.company.push({ label: "Brand Authenticity", status: "Phishing Risk", value: `Mimics official brand '${matchedBrand}'`, isSafe: false });
+      trustScore -= 3.0;
+    }
+  }
+
+  // Free website builders / hosting subdomains
+  const freeHosters = ["wixsite.com", "blogspot.com", "wordpress.com", "vercel.app", "github.io", "webflow.io", "firebaseapp.com", "netlify.app"];
+  const isFreeHost = freeHosters.some(host => hostname.endsWith("." + host) || hostname === host);
+  if (isFreeHost) {
+    flags.red.push("Uses free hosting subdomain or website builder. Genuine businesses invest in custom, branded domains for recruitment.");
+    flags.company.push({ label: "Host Infrastructure", status: "Suspicious", value: "Hosted on free/unbranded subdomain", isSafe: false });
+    trustScore -= 2.0;
   }
 
   // Free URL shorteners
