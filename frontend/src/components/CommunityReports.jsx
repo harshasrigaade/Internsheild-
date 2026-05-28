@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Users, AlertOctagon, ThumbsUp, Search, PlusCircle, ArrowRight, ShieldAlert, X } from "lucide-react";
 
 export default function CommunityReports() {
-  const apiHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000" : `http://${window.location.hostname}:5000`;
+  const apiHost = window.location.port === "5173"
+    ? (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000" : `http://${window.location.hostname}:5000`)
+    : window.location.origin;
   const [reports, setReports] = useState([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);

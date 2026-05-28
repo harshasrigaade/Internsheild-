@@ -29,7 +29,9 @@ export default function OfferAuditor() {
     }
 
     try {
-      const apiHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000" : `http://${window.location.hostname}:5000`;
+      const apiHost = window.location.port === "5173"
+        ? (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000" : `http://${window.location.hostname}:5000`)
+        : window.location.origin;
       const response = await fetch(`${apiHost}/api/analyze-offer`, {
         method: "POST",
         body: formData
