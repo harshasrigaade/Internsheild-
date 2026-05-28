@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "InternShield Tracker",
+  "version": "1.0.0",
+  "description": "Instantly verify active job postings and URLs for recruitment scams using InternShield.",
+  "permissions": [
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

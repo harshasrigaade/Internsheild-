@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cyber-bg: #0a0b10;
+  --color-cyber-card: #121420;
+  --color-cyber-border: #1f2235;
+  --color-cyber-primary: #3b82f6;
+  --color-cyber-accent: #6366f1;
+  --color-cyber-success: #10b981;
+  --color-cyber-warning: #f59e0b;
+  --color-cyber-danger: #ef4444;
+
+  --font-sans: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --shadow-glow-primary: 0 0 15px rgba(59, 130, 246, 0.3);
+  --shadow-glow-success: 0 0 15px rgba(16, 185, 129, 0.3);
+  --shadow-glow-danger: 0 0 15px rgba(239, 68, 68, 0.3);
+  --shadow-glow-warning: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+/* Custom Cyber Aesthetics */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+}
+
+.dark .cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(31, 34, 53, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(31, 34, 53, 0.5) 1px, transparent 1px);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 11, 16, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+/* Animations */
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+/* Utility classes */
+.animate-radar {
+  animation: radar-sweep 6s linear infinite;
+}
+
+.animate-scanline {
+  animation: scanline 4s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-glitch {
+  animation: glitch 1s linear infinite;
+}
+
+.glass-panel {
+  background-color: rgba(18, 20, 32, 0.85);
+  border: 1px solid #1f2235;
+  backdrop-filter: blur(12px);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s ease;
+}
+.glass-panel-hover:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+/* Print CSS styling for report download */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-card {
+    border: 1px solid #ddd !important;
+    background: white !important;
+    box-shadow: none !important;
+    color: black !important;
+    page-break-inside: avoid;
+  }
+}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InternShield Audit</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="extension-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="shield-icon">🛡️</span>
+        <span class="logo-text">INTERNSHIELD</span>
+      </div>
+      <span class="status-indicator"></span>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Welcome panel -->
+      <div id="welcome-panel" class="panel">
+        <p class="intro-text">Click the button below to audit the job posting or website on your active tab.</p>
+        <button id="scan-btn" class="btn btn-primary">Audit Active Tab</button>
+      </div>
+
+      <!-- Loading panel -->
+      <div id="loading-panel" class="panel hidden">
+        <div class="spinner"></div>
+        <p class="loading-text">Verifying domain records...</p>
+      </div>
+
+      <!-- Result panel -->
+      <div id="result-panel" class="panel hidden">
+        <div class="result-header">
+          <div class="score-ring">
+            <span id="score-value">0.0</span>
+            <span class="score-label">SCORE</span>
+          </div>
+          <div class="verdict-group">
+            <h4 id="verdict-title">AUDITING</h4>
+            <span id="risk-badge" class="badge">UNKNOWN</span>
+          </div>
+        </div>
+
+        <div id="advice-box" class="advice-card">
+          Loading audit verdicts...
+        </div>
+
+        <div class="warning-section">
+          <span class="section-title">🔴 Suspect Signals:</span>
+          <ul id="red-flags-list" class="flags-list">
+            <!-- Dynamic flags go here -->
+          </ul>
+        </div>
+
+        <a href="http://localhost:5173" target="_blank" class="btn btn-secondary">Open Web Dashboard</a>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>InternShield V1.0.0 (Local Dev Mode)</span>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
