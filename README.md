@@ -47,7 +47,7 @@ The main goal of this project is to protect students and fresh graduates from fa
 
 ## Author
 
-Developed by Harsha Sri
+Developed by Gadhey Harsha Sri
 
 ## License
 
